@@ -193,8 +193,16 @@ export function AshlarApp() {
   }
 
   function saveEstimate() {
+    const alreadySaved = saved.some(
+      (entry) => entry.lens === lens && sameVector(entry.x, x),
+    );
+    if (alreadySaved) return;
+
     const entry: SavedEstimate = {
-      id: `${Date.now()}`,
+      id:
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       name: active?.name ?? "Custom home",
       at: Date.now(),
       x: x.slice(),
@@ -216,8 +224,20 @@ export function AshlarApp() {
       }),
       "Not an appraisal. Boston housing study, XGBoost.",
     ];
+    const text = lines.join("\n");
     try {
-      await navigator.clipboard.writeText(lines.join("\n"));
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
@@ -535,10 +555,18 @@ export function AshlarApp() {
                         value={rateText}
                         onChange={(event) => setRateText(event.target.value)}
                         inputMode="decimal"
-                        className="numeric h-11 w-24 rounded-full border border-line bg-paper px-3 text-right text-ink"
+                        className={`numeric h-11 w-24 rounded-full border bg-paper px-3 text-right text-ink ${
+                          !rateOk ? "border-amber-700/60" : "border-line"
+                        }`}
                         aria-label="Mortgage interest rate"
+                        aria-invalid={!rateOk}
                       />
                     </label>
+                    {!rateOk ? (
+                      <p className="text-xs text-amber-800" role="alert">
+                        Please enter a valid rate between 0% and 30%.
+                      </p>
+                    ) : null}
                     <dl className="space-y-2 text-sm">
                       <div className="flex justify-between gap-3">
                         <dt className="text-muted">Loan payment</dt>
@@ -795,6 +823,11 @@ function SliderRow({
           max={8.8}
           step={0.05}
           value={Math.min(8.8, Math.max(3.5, value))}
+          aria-label={control.label}
+          aria-valuemin={3.5}
+          aria-valuemax={8.8}
+          aria-valuenow={Number(value.toFixed(2))}
+          aria-valuetext={readout(control.feature, value)}
           onChange={(event) => onChange(Number(event.target.value))}
         />
         <div className="mt-1 flex justify-between text-xs text-muted">
@@ -823,6 +856,11 @@ function SliderRow({
         max={100}
         step={1}
         value={position}
+        aria-label={control.label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={position}
+        aria-valuetext={readout(control.feature, value)}
         onChange={(event) => {
           const next = Number(event.target.value);
           const raw = control.invert ? 100 - next : next;
