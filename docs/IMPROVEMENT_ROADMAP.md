@@ -62,37 +62,27 @@
 
 ---
 
-## 3. Tier 1: High-Value Improvements
+## 3. Tier 1 & 2: High-Value Improvements (Implemented on `feat`)
 
 ### 1.1 Model Validation & Diagnostics Dashboard
-- **Limitation:** Model evaluation stats (MAE 1.985, R² 0.9193) are displayed as raw numbers without visual residual plots.
-- **Proposed Solution:** Add an interactive scatter chart comparing predicted vs recorded median value for all 506 study tracts, with a residual distribution histogram.
-- **User Benefit:** Clear visual proof of where the model fits closely and where errors occur (especially near the $50k cap).
-- **Technical Benefit:** Elevates ML scientific credibility.
-- **Priority:** `P1` | **Effort:** `M` | **Risk:** `Low` | **Dependencies:** Recharts scatter chart component.
+- **Implementation:** Added interactive `ValidationScatter` plot into `#study` comparing actual recorded price vs. predicted price across benchmark tracts with an exact $y=x$ parity reference line.
+- **User & Technical Benefit:** Clear visual proof of tree regression fit and residual error distribution across price bands, boosting ML credibility.
+- **Priority:** `P1` | **Status:** **Implemented on `feat`**
 
 ### 1.2 Out-Of-Distribution (OOD) Input Indicator
-- **Limitation:** Inputs outside historical minimum/maximum ranges (e.g. rooms > 8.8 or crime > 88.9) extrapolate tree outputs without warning.
-- **Proposed Solution:** Display a subtle badge ("Historical range exceeded") when any feature slider exceeds the 1st or 99th dataset percentiles.
-- **User Benefit:** Honest communication of model boundaries and prediction confidence.
-- **Technical Benefit:** Prevents misleading extrapolations.
-- **Priority:** `P1` | **Effort:** `S` | **Risk:** `Low` | **Dependencies:** `model.percentiles` lookup.
-
----
-
-## 4. Tier 2: Optional Enhancements
+- **Implementation:** Added `oodFeatures` listener that triggers a dynamic tail notice when feature inputs exceed the 98th percentile or fall below the 2nd percentile.
+- **User & Technical Benefit:** Transparent communication of model extrapolation boundaries and prediction uncertainty.
+- **Priority:** `P1` | **Status:** **Implemented on `feat`**
 
 ### 2.1 Scenario Comparison Studio
-- **Limitation:** Users can only view one saved estimate at a time by clicking "Open".
-- **Proposed Solution:** Add a "Compare" mode that places two saved estimates side-by-side with delta badges ($\Delta \text{Price}$, $\Delta \text{Payment}$, $\Delta \text{Rooms}$).
-- **User Benefit:** Direct comparison of trade-offs between two home configurations.
-- **Technical Benefit:** Reuses existing `predictMedv` and `monthlyPayment` pure functions without additional dependencies.
-- **Priority:** `P2` | **Effort:** `M` | **Risk:** `Low` | **Dependencies:** Saved estimate state.
+- **Implementation:** Added interactive Scenario Comparison Studio in `#saved` allowing users to select any two saved homes and compare valuations, monthly payments, and feature deltas side-by-side.
+- **User & Technical Benefit:** Empowers users to analyze real-estate trade-offs between two configurations without leaving the page.
+- **Priority:** `P2` | **Status:** **Implemented on `feat`**
 
-### 2.2 Exportable Scenario Summary (JSON / CSV)
-- **Limitation:** Saved estimates are restricted to `localStorage` on a single device.
-- **Proposed Solution:** Provide a one-click "Export JSON" button to back up or share saved estimates.
-- **Priority:** `P2` | **Effort:** `S` | **Risk:** `Nil`.
+### 2.2 Exportable Scenario Summary (JSON Export)
+- **Implementation:** Added one-click "Export JSON" button generating a formatted `ashlar-estimates-YYYY-MM-DD.json` file containing all saved configurations, lenses, and predictions.
+- **User & Technical Benefit:** Data portability allowing users to inspect or backup their estimates.
+- **Priority:** `P2` | **Status:** **Implemented on `feat`**
 
 ---
 
