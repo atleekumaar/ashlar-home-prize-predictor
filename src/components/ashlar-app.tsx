@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -241,6 +242,25 @@ export function AshlarApp() {
   const [rateText, setRateText] = useState("6.5");
   const [saved, setSaved] = useState<SavedEstimate[]>([]);
   const [copied, setCopied] = useState(false);
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    const stored = localStorage.getItem("ashlar.theme");
+    if (stored) return stored === "dark";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+      root.setAttribute("data-theme", "dark");
+      localStorage.setItem("ashlar.theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      root.setAttribute("data-theme", "light");
+      localStorage.setItem("ashlar.theme", "light");
+    }
+  }, [isDark]);
 
   useEffect(() => {
     try {
@@ -418,6 +438,15 @@ export function AshlarApp() {
             <a href="#saved" className="text-muted">
               Saved
             </a>
+            <button
+              type="button"
+              onClick={() => setIsDark((prev) => !prev)}
+              aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-card text-ink transition-colors hover:bg-mist"
+              title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+            >
+              {isDark ? <Sun className="h-4 w-4 text-pine" /> : <Moon className="h-4 w-4 text-ink" />}
+            </button>
           </nav>
         </div>
       </header>

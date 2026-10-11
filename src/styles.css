@@ -1,6 +1,20 @@
 @import "tailwindcss";
 
 @theme {
+  --color-paper: var(--color-paper);
+  --color-paper-deep: var(--color-paper-deep);
+  --color-card: var(--color-card);
+  --color-ink: var(--color-ink);
+  --color-muted: var(--color-muted);
+  --color-line: var(--color-line);
+  --color-pine: var(--color-pine);
+  --color-mist: var(--color-mist);
+  --font-serif: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
   --color-paper: #f6f3ee;
   --color-paper-deep: #ebe6dc;
   --color-card: #fffcf8;
@@ -9,13 +23,23 @@
   --color-line: #e3ddd4;
   --color-pine: #1f4d3a;
   --color-mist: #e7f0eb;
-  --font-serif: "Fraunces", ui-serif, Georgia, serif;
-  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: #111613;
+  --color-paper-deep: #17201a;
+  --color-card: #18221c;
+  --color-ink: #f0f4f1;
+  --color-muted: #95a39a;
+  --color-line: #29382f;
+  --color-pine: #3da879;
+  --color-mist: #1a2a21;
 }
 
 @layer base {
   html {
-    color-scheme: light;
     background: var(--color-paper);
     font-family: var(--font-sans);
     scroll-behavior: smooth;
