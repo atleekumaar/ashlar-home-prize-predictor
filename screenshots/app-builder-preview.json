@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Ashlar",
+      "hasCanvas": false,
+      "bodyTextLen": 3611,
+      "bodyTextHash": "bea80aeec58f9d54d2944bc8931875a0ba691575e2ad7902b5e52cf803254cc6",
+      "bodyTextPrefix": "Ashlar Estimate Study Saved HOUSE VALUE STUDIO A house price you",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Ashlar",
+      "hasCanvas": false,
+      "bodyTextLen": 3575,
+      "bodyTextHash": "ab944c63e086aa9350d4c5fff3aa38830218b0e9358910fd6e060f595ff7dfb8",
+      "bodyTextPrefix": "Ashlar Estimate Study Saved HOUSE VALUE STUDIO A house price you",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}
