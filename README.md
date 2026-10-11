@@ -4,6 +4,8 @@ An interactive house price evaluation studio and machine learning explorer.
 
 Ashlar lets users inspect, adjust, and understand property valuations based on 12 key tract and property characteristics, powered by an XGBoost model fit on historical housing dataset benchmarks.
 
+🌐 **Live Demo:** [https://ashlar-home-prize-predictor.vercel.app/](https://ashlar-home-prize-predictor.vercel.app/)
+
 ## Documentation & Audits
 
 - [System Audit Report (Phase 8 Questions)](docs/AUDIT_REPORT.md)
