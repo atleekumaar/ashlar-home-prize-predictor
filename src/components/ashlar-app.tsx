@@ -3,10 +3,14 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
+  ZAxis,
 } from "recharts";
 import { model } from "@/data/model-data";
 import {
@@ -134,6 +138,102 @@ function RoomCurve({ x, factor }: { x: number[]; factor: number }) {
   );
 }
 
+function ValidationScatter() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const sampleData = useMemo(() => {
+    // Sample 100 benchmark tracts across the 506 historical rows
+    return model.rows
+      .filter((_, idx) => idx % 5 === 0)
+      .map((row) => {
+        const pred = predictMedv(row.x);
+        return {
+          id: row.id,
+          actual: row.price,
+          predicted: Number(pred.toFixed(1)),
+          residual: Number((pred - row.price).toFixed(1)),
+        };
+      });
+  }, []);
+
+  if (!mounted) return <div className="h-64" />;
+
+  return (
+    <div className="h-64 w-full min-w-0">
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={{ top: 12, right: 16, bottom: 8, left: -10 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-line)" />
+          <XAxis
+            type="number"
+            dataKey="actual"
+            name="Recorded Price"
+            unit="k"
+            domain={[0, 55]}
+            tick={{ fill: "var(--color-muted)", fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            type="number"
+            dataKey="predicted"
+            name="Predicted"
+            unit="k"
+            domain={[0, 55]}
+            tick={{ fill: "var(--color-muted)", fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <ZAxis range={[30, 30]} />
+          <Tooltip
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const data = payload[0].payload as {
+                id: number;
+                actual: number;
+                predicted: number;
+                residual: number;
+              };
+              return (
+                <div className="rounded-xl border border-line bg-card px-3 py-2 text-xs shadow-none">
+                  <div className="font-medium text-ink">Study Row #{data.id}</div>
+                  <div className="mt-1 text-muted">
+                    Recorded: <span className="text-ink numeric">${data.actual}k</span>
+                  </div>
+                  <div className="text-muted">
+                    Predicted: <span className="text-ink numeric">${data.predicted}k</span>
+                  </div>
+                  <div className="text-muted">
+                    Error (residual):{" "}
+                    <span className={data.residual >= 0 ? "text-pine numeric" : "text-amber-800 numeric"}>
+                      {data.residual >= 0 ? `+${data.residual}` : data.residual}k
+                    </span>
+                  </div>
+                </div>
+              );
+            }}
+          />
+          <ReferenceLine
+            segment={[
+              { x: 5, y: 5 },
+              { x: 50, y: 50 },
+            ]}
+            stroke="var(--color-muted)"
+            strokeDasharray="4 4"
+            strokeWidth={1.5}
+          />
+          <Scatter
+            name="Tract Predictions"
+            data={sampleData}
+            fill="var(--color-pine)"
+            opacity={0.7}
+          />
+        </ScatterChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export function AshlarApp() {
   const [x, setX] = useState(() => vectorFromRow(78));
   const [lens, setLens] = useState<LensId>("coastal");
@@ -183,6 +283,62 @@ export function AshlarApp() {
     (a, b) => Math.abs(b[1]) - Math.abs(a[1]),
   );
   const histMax = Math.max(...model.histogram.map((bin) => bin.count));
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareAId, setCompareAId] = useState<string>("");
+  const [compareBId, setCompareBId] = useState<string>("");
+
+  useEffect(() => {
+    if (saved.length >= 2) {
+      if (!compareAId || !saved.some((s) => s.id === compareAId)) {
+        setCompareAId(saved[0].id);
+      }
+      if (!compareBId || !saved.some((s) => s.id === compareBId)) {
+        setCompareBId(saved[1].id);
+      }
+    }
+  }, [saved, compareAId, compareBId]);
+
+  const oodFeatures = useMemo(() => {
+    return model.features.filter((feature) => {
+      const knot = percentileOf(feature, x[featureIndex(feature)]);
+      return knot <= 1 || knot >= 99;
+    });
+  }, [x]);
+
+  function exportSavedJson() {
+    if (!saved.length) return;
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      appName: "Ashlar Home Price Predictor",
+      count: saved.length,
+      estimates: saved.map((item) => {
+        const meta = lensById(item.lens);
+        const estPrice = roundDollars(dollarsFromMedv(item.medv, meta.factor), meta.factor);
+        return {
+          id: item.id,
+          name: item.name,
+          savedAt: new Date(item.at).toISOString(),
+          lens: item.lens,
+          lensLabel: meta.label,
+          estimatedPriceFormatted: formatMoney(estPrice),
+          estimatedPriceDollars: estPrice,
+          studyFigureMedv: item.medv,
+          features: Object.fromEntries(
+            model.features.map((feature, idx) => [feature, item.x[idx]]),
+          ),
+        };
+      }),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ashlar-estimates-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   function update(index: number, value: number) {
     setX((current) => {
@@ -482,6 +638,22 @@ export function AshlarApp() {
                       so read it as “at least this.”
                     </p>
                   ) : null}
+                  {oodFeatures.length > 0 ? (
+                    <div className="rounded-xl border border-line bg-paper-deep/60 px-3.5 py-3 text-xs text-ink">
+                      <div className="flex items-center gap-1.5 font-medium text-ink">
+                        <span className="inline-block h-2 w-2 rounded-full bg-amber-600" />
+                        <span>
+                          Historical tail notice ({oodFeatures.length} extreme{" "}
+                          {oodFeatures.length === 1 ? "setting" : "settings"})
+                        </span>
+                      </div>
+                      <p className="mt-1 leading-relaxed text-muted">
+                        {oodFeatures.map((f) => SHORT_LABEL[f]).join(", ")}{" "}
+                        {oodFeatures.length === 1 ? "is" : "are"} beyond 98% of historical tracts in
+                        the benchmark. Predictions at outer tails extrapolate with wider uncertainty.
+                      </p>
+                    </div>
+                  ) : null}
                   <dl className="grid grid-cols-3 gap-3 border-t border-line pt-4">
                     <div>
                       <dt className="text-xs text-muted">Per room</dt>
@@ -696,6 +868,29 @@ export function AshlarApp() {
             about {formatMoney(model.metrics.testMae * 1000)} then.
           </p>
 
+          <div className="mt-12 rounded-2xl border border-line bg-card p-5 md:p-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+              <div>
+                <h3 className="font-serif text-2xl tracking-tight md:text-3xl">
+                  Model Validation & Diagnostic Fit
+                </h3>
+                <p className="mt-1 max-w-xl text-sm text-muted">
+                  Recorded vs. predicted median values ($1978k) across sample census tracts.
+                  The dashed diagonal represents exact agreement (y = x).
+                </p>
+              </div>
+              <span className="text-xs text-muted">Sample N=102</span>
+            </div>
+            <div className="mt-6">
+              <ValidationScatter />
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-xs text-muted">
+              <span>● Historical tract</span>
+              <span>--- Exact prediction parity line</span>
+              <span>80/20 train-test split (random_state 2)</span>
+            </div>
+          </div>
+
           <div className="mt-12 grid gap-10 lg:grid-cols-2">
             <div>
               <h3 className="font-serif text-2xl">How each fact moved with price</h3>
@@ -740,8 +935,180 @@ export function AshlarApp() {
         </section>
 
         <section id="saved" className="scroll-mt-24 border-t border-line py-14">
-          <h2 className="font-serif text-3xl tracking-tight md:text-4xl">Saved</h2>
-          <p className="mt-2 max-w-xl text-muted">Kept in this browser only. Nothing is sent away.</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-serif text-3xl tracking-tight md:text-4xl">Saved</h2>
+              <p className="mt-2 max-w-xl text-muted">Kept in this browser only. Nothing is sent away.</p>
+            </div>
+            {saved.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {saved.length >= 2 ? (
+                  <button
+                    type="button"
+                    onClick={() => setCompareOpen((prev) => !prev)}
+                    className={
+                      compareOpen
+                        ? "h-11 rounded-full bg-pine px-4 text-sm text-paper"
+                        : "h-11 rounded-full border border-line bg-card px-4 text-sm text-ink"
+                    }
+                  >
+                    {compareOpen ? "Hide comparison" : "Compare scenarios"}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={exportSavedJson}
+                  className="h-11 rounded-full border border-line bg-card px-4 text-sm text-ink"
+                >
+                  Export JSON ({saved.length})
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          {compareOpen && saved.length >= 2 ? (
+            <div className="mt-8 rounded-2xl border border-line bg-card p-5 md:p-6">
+              <div className="flex items-center justify-between border-b border-line pb-4">
+                <h3 className="font-serif text-2xl tracking-tight">Scenario Comparison Studio</h3>
+                <span className="text-xs text-muted">Side-by-side trade-offs</span>
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="compare-a" className="block text-xs font-medium text-muted">
+                    Scenario A
+                  </label>
+                  <select
+                    id="compare-a"
+                    value={compareAId}
+                    onChange={(e) => setCompareAId(e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-line bg-paper px-3 text-sm text-ink"
+                  >
+                    {saved.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} ({formatMoney(roundDollars(dollarsFromMedv(item.medv, lensById(item.lens).factor), lensById(item.lens).factor))})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="compare-b" className="block text-xs font-medium text-muted">
+                    Scenario B
+                  </label>
+                  <select
+                    id="compare-b"
+                    value={compareBId}
+                    onChange={(e) => setCompareBId(e.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-line bg-paper px-3 text-sm text-ink"
+                  >
+                    {saved.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} ({formatMoney(roundDollars(dollarsFromMedv(item.medv, lensById(item.lens).factor), lensById(item.lens).factor))})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {(() => {
+                const itemA = saved.find((s) => s.id === compareAId) ?? saved[0];
+                const itemB = saved.find((s) => s.id === compareBId) ?? saved[1];
+                const metaA = lensById(itemA.lens);
+                const metaB = lensById(itemB.lens);
+                const priceA = roundDollars(dollarsFromMedv(itemA.medv, metaA.factor), metaA.factor);
+                const priceB = roundDollars(dollarsFromMedv(itemB.medv, metaB.factor), metaB.factor);
+                const diffPrice = priceB - priceA;
+                const loanA = priceA * 0.8;
+                const loanB = priceB * 0.8;
+                const payA = monthlyPayment(loanA, 6.5);
+                const payB = monthlyPayment(loanB, 6.5);
+                const diffPay = payB - payA;
+
+                const compareFeatures = ["RM", "CHAS", "CRIM", "PTRATIO", "TAX", "LSTAT", "DIS"];
+
+                return (
+                  <div className="mt-6 space-y-6">
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="rounded-xl border border-line bg-paper p-4">
+                        <span className="text-xs text-muted">Scenario A Value</span>
+                        <p className="numeric mt-1 font-serif text-2xl">{formatMoney(priceA)}</p>
+                        <span className="text-xs text-muted">{metaA.label}</span>
+                      </div>
+                      <div className="rounded-xl border border-line bg-paper p-4">
+                        <span className="text-xs text-muted">Scenario B Value</span>
+                        <p className="numeric mt-1 font-serif text-2xl">{formatMoney(priceB)}</p>
+                        <span className="text-xs text-muted">{metaB.label}</span>
+                      </div>
+                      <div className="rounded-xl border border-line bg-paper p-4">
+                        <span className="text-xs text-muted">Difference (B − A)</span>
+                        <p className="numeric mt-1 font-serif text-2xl text-pine">
+                          {diffPrice >= 0 ? `+${formatMoney(diffPrice)}` : `−${formatMoney(Math.abs(diffPrice))}`}
+                        </p>
+                        <span className="numeric text-xs text-muted">
+                          {diffPay >= 0 ? `+${formatMoney(diffPay)}/mo` : `−${formatMoney(Math.abs(diffPay))}/mo`} @ 6.5%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-line text-xs text-muted">
+                            <th className="py-2 pr-4 font-normal">Feature</th>
+                            <th className="py-2 px-4 font-normal">Scenario A</th>
+                            <th className="py-2 px-4 font-normal">Scenario B</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-line">
+                          {compareFeatures.map((feat) => {
+                            const idx = featureIndex(feat);
+                            const valA = itemA.x[idx];
+                            const valB = itemB.x[idx];
+                            const isDifferent = Math.abs(valA - valB) > 1e-3;
+                            return (
+                              <tr key={feat} className={isDifferent ? "bg-mist/40" : ""}>
+                                <td className="py-2.5 pr-4 text-ink font-medium">
+                                  {SHORT_LABEL[feat]}
+                                </td>
+                                <td className="numeric py-2.5 px-4 text-muted">
+                                  {readout(feat, valA)}
+                                </td>
+                                <td className="numeric py-2.5 px-4 text-muted">
+                                  {readout(feat, valB)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setX(itemA.x.slice());
+                          setLens(itemA.lens);
+                        }}
+                        className="h-10 rounded-full border border-line bg-paper px-4 text-xs text-ink"
+                      >
+                        Apply A to studio
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setX(itemB.x.slice());
+                          setLens(itemB.lens);
+                        }}
+                        className="h-10 rounded-full border border-line bg-paper px-4 text-xs text-ink"
+                      >
+                        Apply B to studio
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          ) : null}
           {saved.length === 0 ? (
             <p className="mt-8 rounded-2xl border border-dashed border-line px-5 py-8 text-muted">
               No estimates yet. Build one and save it — it will sit here.
