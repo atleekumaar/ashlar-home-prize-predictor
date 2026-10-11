@@ -424,10 +424,15 @@ export function AshlarApp() {
   return (
     <div id="top" className="min-h-screen bg-paper text-ink">
       <header className="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4 md:px-8">
+        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4 md:px-8">
           <a href="#top" className="font-serif text-2xl tracking-tight text-ink">
             Ashlar
           </a>
+          <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+            <span className="pointer-events-auto rounded-full border border-line bg-card/80 px-3.5 py-1 text-xs font-medium tracking-wide text-ink md:text-sm">
+              By Atlee Kumaar
+            </span>
+          </div>
           <nav className="flex items-center gap-4 text-sm md:gap-6">
             <a href="#estimate" className="text-ink">
               Estimate
